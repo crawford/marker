@@ -197,26 +197,30 @@ fn check_link(state: &mut State,
 }
 
 fn check_url(links: &mut HashMap<Url, StatusCode>, url: Url) -> Result<(), LinkError> {
-    let status = if let Some(&status) = links.get(&url) {
-        Some(status)
+    if url.scheme() != "http" && url.scheme() != "https" {
+        return Ok(());
+    }
+
+    let client = Client::new();
+    let status = if let Some(status) = links.remove(&url) {
+        status
     } else {
-        if url.scheme() == "http" || url.scheme() == "https" {
-            match Client::new().head(url.clone()).send() {
-                Ok(resp) => {
-                    links.insert(url, resp.status);
-                    Some(resp.status)
-                }
-                Err(err) => return Err(LinkError::HttpError(err)),
+        let res = client.head(url.clone()).send().and_then(|resp| {
+            if resp.status == StatusCode::MethodNotAllowed {
+                client.get(url.clone()).send()
+            } else {
+                Ok(resp)
             }
-        } else {
-            None
+        });
+        match res {
+            Ok(resp) => resp.status,
+            Err(err) => return Err(LinkError::HttpError(err)),
         }
     };
-
+    links.insert(url, status);
     match status {
-        Some(StatusCode::Ok) => Ok(()),
-        Some(status) => Err(LinkError::HttpStatus(status)),
-        None => Ok(()),
+        StatusCode::Ok => Ok(()),
+        status => Err(LinkError::HttpStatus(status)),
     }
 }
 
