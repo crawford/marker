@@ -21,6 +21,7 @@ extern crate walkdir;
 
 use clap::{Arg, App};
 use hyper::client::Client;
+use hyper::header::UserAgent;
 use hyper::status::StatusCode;
 use pulldown_cmark::{Event, OPTION_ENABLE_TABLES, Parser, Tag};
 use std::collections::HashMap;
@@ -202,12 +203,14 @@ fn check_url(links: &mut HashMap<Url, StatusCode>, url: Url) -> Result<(), LinkE
     }
 
     let client = Client::new();
+    let agent = UserAgent(format!("marker/{}", crate_version!()));
+
     let status = if let Some(status) = links.remove(&url) {
         status
     } else {
-        let res = client.head(url.clone()).send().and_then(|resp| {
+        let res = client.head(url.clone()).header(agent.clone()).send().and_then(|resp| {
             if resp.status == StatusCode::MethodNotAllowed {
-                client.get(url.clone()).send()
+                client.get(url.clone()).header(agent.clone()).send()
             } else {
                 Ok(resp)
             }
