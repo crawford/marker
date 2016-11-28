@@ -1,0 +1,16 @@
+[package]
+name = "marker"
+version = "0.0.0"
+authors = ["Alex Crawford <alex.crawford@coreos.com>"]
+description = "Tool for finding issues in CommonMark documents"
+repository = "https://github.com/crawford/marker"
+readme = "README.md"
+keywords = ["commonmark", "markdown", "links", "validate"]
+license = "Apache-2.0"
+
+[dependencies]
+clap = "^2.19.0"
+hyper = "^0.9.13"
+pulldown-cmark = "^0.0.8"
+url = "^1.2.3"
+walkdir = "^1.0.2"
