@@ -105,21 +105,26 @@ fn main() {
             text
         };
 
+        let newlines = contents.match_indices('\n').map(|(i, _)| i).collect::<Vec<_>>();
+
         let mut state = State {
             skip_http: skip_http,
             code_block: false,
             last_text: String::new(),
             directory: entry.path().parent().expect("non-root path"),
         };
-        for event in Parser::new_ext(&contents, OPTION_ENABLE_TABLES) {
+        let mut parser = Parser::new_ext(&contents, OPTION_ENABLE_TABLES);
+        while let Some(event) = parser.next() {
+            let line = newlines.iter().take_while(|i| i <= &&parser.get_offset()).count() + 1;
             match event {
                 Event::Text(ref text) => {
                     state.last_text = text.to_string();
                     if let Some(reference) = try_reference(&state, text) {
                         print_issue!(found_issue,
-                                     "Found broken reference ({}) in {}",
+                                     "Found broken reference ({}) in {}:{}",
                                      reference,
-                                     entry.path().display())
+                                     entry.path().display(),
+                                     line)
                     }
                 }
                 Event::End(Tag::Link(dest, _)) => {
@@ -127,40 +132,45 @@ fn main() {
                         Ok(()) => {}
                         Err(LinkError::PathAbsolute) => {
                             print_issue!(found_issue,
-                                         "Found absolute path    ({} -> {}) in {}",
-                                         state.last_text,
-                                         dest,
-                                         entry.path().display())
-                        }
-                        Err(LinkError::PathNonExistant) => {
-                            print_issue!(found_issue,
-                                         "Found broken path      ({} -> {}) in {}",
-                                         state.last_text,
-                                         dest,
-                                         entry.path().display())
-                        }
-                        Err(LinkError::HttpStatus(status)) => {
-                            print_issue!(found_issue,
-                                         "Found broken url       ({} -> {}) in {}: {}",
+                                         "Found absolute path    ({} -> {}) at {}:{}",
                                          state.last_text,
                                          dest,
                                          entry.path().display(),
+                                         line)
+                        }
+                        Err(LinkError::PathNonExistant) => {
+                            print_issue!(found_issue,
+                                         "Found broken path      ({} -> {}) at {}:{}",
+                                         state.last_text,
+                                         dest,
+                                         entry.path().display(),
+                                         line)
+                        }
+                        Err(LinkError::HttpStatus(status)) => {
+                            print_issue!(found_issue,
+                                         "Found broken url       ({} -> {}) at {}:{} : {}",
+                                         state.last_text,
+                                         dest,
+                                         entry.path().display(),
+                                         line,
                                          status)
                         }
                         Err(LinkError::HttpError(err)) => {
                             print_issue!(found_issue,
-                                         "HTTP failure           ({} -> {}) in {}: {}",
+                                         "HTTP failure           ({} -> {}) at {}:{} : {}",
                                          state.last_text,
                                          dest,
                                          entry.path().display(),
+                                         line,
                                          err);
                         }
                         Err(LinkError::UrlMalformed(err)) => {
                             print_issue!(found_issue,
-                                         "Found malformed URL    ({} -> {}) in {}: {}",
+                                         "Found malformed URL    ({} -> {}) at {}:{} : {}",
                                          state.last_text,
                                          dest,
                                          entry.path().display(),
+                                         line,
                                          err);
                         }
                     }
@@ -179,7 +189,7 @@ fn main() {
 
 fn try_reference<'a>(state: &State, text: &'a str) -> Option<&'a str> {
     if !state.code_block && text.chars().next() == Some('[') && text.chars().last() == Some(']') {
-        Some(text)
+        Some(&text[1..(text.len() - 1)])
     } else {
         None
     }
