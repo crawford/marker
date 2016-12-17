@@ -115,7 +115,7 @@ fn main() {
         };
         let mut parser = Parser::new_ext(&contents, OPTION_ENABLE_TABLES);
         while let Some(event) = parser.next() {
-            let line = newlines.iter().take_while(|i| i <= &&parser.get_offset()).count() + 1;
+            let line = newlines.iter().take_while(|i| i < &&parser.get_offset()).count() + 1;
             match event {
                 Event::Text(ref text) => {
                     state.last_text = text.to_string();
