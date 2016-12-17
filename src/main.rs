@@ -190,8 +190,12 @@ fn main() {
 }
 
 fn try_reference<'a>(state: &State, text: &'a str) -> Option<&'a str> {
-    if !state.code_block && text.chars().next() == Some('[') && text.chars().last() == Some(']') {
-        Some(&text[1..(text.len() - 1)])
+    if state.code_block || text.chars().next() != Some('[') {
+        return None;
+    }
+
+    if let Some(pos) = text.find(']') {
+        Some(&text[1..pos])
     } else {
         None
     }
