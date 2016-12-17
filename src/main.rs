@@ -175,8 +175,10 @@ fn main() {
                         }
                     }
                 }
-                Event::Start(Tag::Code) => state.code_block = true,
-                Event::End(Tag::Code) => state.code_block = false,
+                Event::Start(Tag::Code) |
+                Event::Start(Tag::CodeBlock(_)) => state.code_block = true,
+                Event::End(Tag::Code) |
+                Event::End(Tag::CodeBlock(_)) => state.code_block = false,
                 _ => {}
             }
         }
