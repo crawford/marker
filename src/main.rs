@@ -42,7 +42,7 @@ macro_rules! fail {
     ($($print:expr),+) => {
         {
             let _ = writeln!(&mut std::io::stderr(), $($print),+);
-            exit(2);
+            exit(1);
         }
     };
 }
