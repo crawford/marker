@@ -12,6 +12,14 @@ Marker can be installed using [cargo][cargo]:
 cargo install marker
 ```
 
+OSX doesn't ship with openssl. Install the openssl keg and export the OPENSSL_INCLUDE_DIR. Ensure it is the right version!
+
+```
+brew install openssl
+export OPENSSL_INCLUDE_DIR=/usr/local/Cellar/openssl/1.0.2j/include/
+cargo install marker
+```
+
 ## Running Marker ##
 
 When run without any arguments, Marker will search the current working
