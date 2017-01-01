@@ -49,6 +49,15 @@ macro_rules! fail {
     };
 }
 
+macro_rules! printerror {
+    ($error:expr, $flag:expr) => {
+        {
+            println!("{}", $error);
+            $flag = true;
+        }
+    };
+}
+
 struct LinkContext {
     target: String,
     text: String,
@@ -88,7 +97,7 @@ fn main() {
     let skip_http = matches.is_present("skip-http");
     let root = Path::new(matches.value_of("root").unwrap_or("."));
     let mut links = Vec::new();
-    let mut errors = Vec::new();
+    let mut found_error = false;
 
     for entry in WalkDir::new(root).into_iter().filter_map(|entry| {
         let entry = entry.unwrap_or_else(|error| {
@@ -126,13 +135,14 @@ fn main() {
                     })
                 }
                 Event::Error(Error::ReferenceBroken { target, text }) => {
-                    errors.push(LinkContext {
-                            target: target,
-                            text: text,
-                            line: event.line,
-                            file: entry.path().to_path_buf(),
-                        }
-                        .new_error(LinkError::ReferenceBroken))
+                    printerror!(LinkContext {
+                                        target: target,
+                                        text: text,
+                                        line: event.line,
+                                        file: entry.path().to_path_buf(),
+                                    }
+                                    .new_error(LinkError::ReferenceBroken),
+                                found_error)
                 }
             }
         }
@@ -148,10 +158,10 @@ fn main() {
             }
             Err(ParseError::RelativeUrlWithoutBase) => {
                 if let Err(error) = check_path(&link.target, &link.file) {
-                    errors.push(link.new_error(error))
+                    printerror!(link.new_error(error), found_error)
                 }
             }
-            Err(error) => errors.push(link.new_error(LinkError::UrlMalformed(error))),
+            Err(error) => printerror!(link.new_error(LinkError::UrlMalformed(error)), found_error),
         }
     }
 
@@ -160,16 +170,12 @@ fn main() {
         .collect::<Vec<_>>() {
         if let Err(error) = result {
             for link in links {
-                errors.push(link.new_error(error.clone()))
+                printerror!(link.new_error(error.clone()), found_error)
             }
         }
     }
 
-    for error in &errors {
-        println!("{}", error);
-    }
-
-    if errors.len() > 0 {
+    if found_error {
         exit(1)
     }
 }
