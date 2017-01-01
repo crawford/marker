@@ -16,6 +16,7 @@
 extern crate clap;
 extern crate hyper;
 extern crate pulldown_cmark;
+extern crate rayon;
 extern crate url;
 extern crate walkdir;
 
@@ -28,13 +29,14 @@ use error::{DocumentError, DocumentLocation, LinkError, LocatedDocumentError};
 use hyper::client::Client;
 use hyper::header::UserAgent;
 use hyper::status::StatusCode;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
-use std::rc::Rc;
+use std::sync::Arc;
 use url::{ParseError, Url};
 use walkdir::WalkDir;
 
@@ -153,8 +155,10 @@ fn main() {
         }
     }
 
-    for (url, links) in urls {
-        if let Err(error) = check_url(url) {
+    for (result, links) in urls.into_par_iter()
+        .map(|(url, links)| (check_url(url), links))
+        .collect::<Vec<_>>() {
+        if let Err(error) = result {
             for link in links {
                 errors.push(link.new_error(error.clone()))
             }
@@ -192,7 +196,7 @@ fn check_url(url: Url) -> Result<(), LinkError> {
                 status => Err(LinkError::HttpStatus(status)),
             }
         }
-        Err(error) => return Err(LinkError::HttpError(Rc::new(error))),
+        Err(error) => return Err(LinkError::HttpError(Arc::new(error))),
     }
 }
 

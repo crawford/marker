@@ -15,7 +15,7 @@
 use hyper;
 use std::fmt;
 use std::path::PathBuf;
-use std::rc::Rc;
+use std::sync::Arc;
 use url::ParseError;
 
 #[derive(Clone)]
@@ -23,7 +23,7 @@ pub enum LinkError {
     PathAbsolute,
     PathNonExistant,
     HttpStatus(hyper::status::StatusCode),
-    HttpError(Rc<hyper::error::Error>),
+    HttpError(Arc<hyper::error::Error>),
     UrlMalformed(ParseError),
     ReferenceBroken,
 }
