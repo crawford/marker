@@ -9,9 +9,10 @@ keywords = ["commonmark", "markdown", "links", "validate"]
 license = "Apache-2.0"
 
 [dependencies]
-clap = "^2.19.0"
-hyper = "^0.9.13"
+clap = "^2.20.3"
+hyper = "^0.10.4"
+hyper-rustls = "^0.3.1"
 pulldown-cmark = "^0.0.8"
-url = "^1.2.3"
-walkdir = "^1.0.2"
+url = "^1.4.0"
+walkdir = "^1.0.7"
 rayon= "^0.6.0"
