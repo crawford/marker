@@ -15,6 +15,7 @@
 #[macro_use]
 extern crate clap;
 extern crate hyper;
+extern crate hyper_rustls;
 extern crate pulldown_cmark;
 extern crate rayon;
 extern crate url;
@@ -28,7 +29,9 @@ use document::{Document, Error, Event};
 use error::{DocumentError, DocumentLocation, LinkError, LocatedDocumentError};
 use hyper::client::Client;
 use hyper::header::UserAgent;
+use hyper::net::HttpsConnector;
 use hyper::status::StatusCode;
+use hyper_rustls::TlsClient;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -185,7 +188,7 @@ fn check_url(url: Url) -> Result<(), LinkError> {
         return Ok(());
     }
 
-    let client = Client::new();
+    let client = Client::with_connector(HttpsConnector::new(TlsClient::new()));
     let agent = UserAgent(format!("marker/{}", crate_version!()));
 
     let res = client.head(url.clone()).header(agent.clone()).send().and_then(|resp| {
