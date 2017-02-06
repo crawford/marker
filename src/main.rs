@@ -191,13 +191,14 @@ fn check_url(url: Url) -> Result<(), LinkError> {
     let client = Client::with_connector(HttpsConnector::new(TlsClient::new()));
     let agent = UserAgent(format!("marker/{}", crate_version!()));
 
-    let res = client.head(url.clone()).header(agent.clone()).send().and_then(|resp| {
-        if resp.status == StatusCode::MethodNotAllowed {
+    let res = client.head(url.clone())
+        .header(agent.clone())
+        .send()
+        .and_then(|resp| if resp.status == StatusCode::MethodNotAllowed {
             client.get(url.clone()).header(agent.clone()).send()
         } else {
             Ok(resp)
-        }
-    });
+        });
     match res {
         Ok(resp) => {
             match resp.status {
