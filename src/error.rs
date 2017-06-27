@@ -55,7 +55,11 @@ pub struct LocatedDocumentError {
 impl fmt::Display for LocatedDocumentError {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         match self.error {
-            DocumentError::Link { ref text, ref target, ref error } => {
+            DocumentError::Link {
+                ref text,
+                ref target,
+                ref error,
+            } => {
                 let (title, detail): (&str, Option<&fmt::Display>) = match *error {
                     LinkError::PathAbsolute => ("Found absolute path", None),
                     LinkError::PathNonExistant => ("Found broken path", None),
@@ -66,21 +70,25 @@ impl fmt::Display for LocatedDocumentError {
                 };
                 match detail {
                     Some(detail) => {
-                        write!(formatter,
-                               "{:22} ({} -> {}) at {} : {}",
-                               title,
-                               text,
-                               target,
-                               self.location,
-                               detail)
+                        write!(
+                            formatter,
+                            "{:22} ({} -> {}) at {} : {}",
+                            title,
+                            text,
+                            target,
+                            self.location,
+                            detail
+                        )
                     }
                     None => {
-                        write!(formatter,
-                               "{:22} ({} -> {}) at {}",
-                               title,
-                               text,
-                               target,
-                               self.location)
+                        write!(
+                            formatter,
+                            "{:22} ({} -> {}) at {}",
+                            title,
+                            text,
+                            target,
+                            self.location
+                        )
                     }
                 }
             }

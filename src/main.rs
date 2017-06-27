@@ -87,14 +87,16 @@ impl LinkContext {
 fn main() {
     let matches = App::new("Marker")
         .version(crate_version!())
-        .arg(Arg::with_name("root")
-            .short("r")
-            .long("root")
-            .help("The path to the root of the documentation to be checked")
-            .takes_value(true))
-        .arg(Arg::with_name("skip-http")
-            .long("skip-http")
-            .help("Skip validation of HTTP[S] URLs"))
+        .arg(
+            Arg::with_name("root")
+                .short("r")
+                .long("root")
+                .help("The path to the root of the documentation to be checked")
+                .takes_value(true),
+        )
+        .arg(Arg::with_name("skip-http").long("skip-http").help(
+            "Skip validation of HTTP[S] URLs",
+        ))
         .get_matches();
 
     let skip_http = matches.is_present("skip-http");
@@ -111,18 +113,23 @@ fn main() {
         } else {
             None
         }
-    }) {
+    })
+    {
         let contents = {
             let mut file = File::open(entry.path()).unwrap_or_else(|error| {
-                fail!("Failed to open file ({}): {}",
-                      entry.path().display(),
-                      error);
+                fail!(
+                    "Failed to open file ({}): {}",
+                    entry.path().display(),
+                    error
+                );
             });
             let mut text = String::new();
             if let Err(error) = file.read_to_string(&mut text) {
-                fail!("Failed to read file ({}): {}",
-                      entry.path().display(),
-                      error);
+                fail!(
+                    "Failed to read file ({}): {}",
+                    entry.path().display(),
+                    error
+                );
             };
             text
         };
@@ -138,14 +145,15 @@ fn main() {
                     })
                 }
                 Event::Error(Error::ReferenceBroken { target, text }) => {
-                    printerror!(LinkContext {
-                                        target: target,
-                                        text: text,
-                                        line: event.line,
-                                        file: entry.path().to_path_buf(),
-                                    }
-                                    .new_error(LinkError::ReferenceBroken),
-                                found_error)
+                    printerror!(
+                        LinkContext {
+                            target: target,
+                            text: text,
+                            line: event.line,
+                            file: entry.path().to_path_buf(),
+                        }.new_error(LinkError::ReferenceBroken),
+                        found_error
+                    )
                 }
             }
         }
@@ -170,7 +178,8 @@ fn main() {
 
     for (result, links) in urls.into_par_iter()
         .map(|(url, links)| (check_url(url), links))
-        .collect::<Vec<_>>() {
+        .collect::<Vec<_>>()
+    {
         if let Err(error) = result {
             for link in links {
                 printerror!(link.new_error(error.clone()), found_error)
@@ -191,7 +200,8 @@ fn check_url(url: Url) -> Result<(), LinkError> {
     let client = Client::with_connector(HttpsConnector::new(TlsClient::new()));
     let agent = UserAgent(format!("marker/{}", crate_version!()));
 
-    let res = client.head(url.clone())
+    let res = client
+        .head(url.clone())
         .header(agent.clone())
         .send()
         .and_then(|resp| if resp.status == StatusCode::MethodNotAllowed {
@@ -214,7 +224,11 @@ fn check_path(target: &str, file: &Path) -> Result<(), LinkError> {
     let path = Path::new(OsStr::new(target.split('#').next().expect("string")));
     if path.is_absolute() {
         Err(LinkError::PathAbsolute)
-    } else if !file.parent().expect("non-root file path").join(path).exists() {
+    } else if !file.parent()
+               .expect("non-root file path")
+               .join(path)
+               .exists()
+    {
         Err(LinkError::PathNonExistant)
     } else {
         Ok(())

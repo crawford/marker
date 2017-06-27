@@ -55,7 +55,10 @@ impl<'a> Document<'a> {
     fn new_located_event(&self, event: Event) -> LocatedEvent {
         LocatedEvent {
             event: event,
-            line: self.newlines.iter().take_while(|&&i| i < self.parser.get_offset()).count() + 1,
+            line: self.newlines
+                .iter()
+                .take_while(|&&i| i < self.parser.get_offset())
+                .count() + 1,
         }
     }
 }
@@ -69,10 +72,12 @@ impl<'a> Iterator for Document<'a> {
                 ParserEvent::Text(ref text) if !self.code_block => {
                     self.last_text = Some(text.to_string());
                     if let Some(reference) = try_reference(text) {
-                        return Some(self.new_located_event(Event::Error(Error::ReferenceBroken {
-                            text: reference.to_string(),
-                            target: reference.to_string(),
-                        })));
+                        return Some(self.new_located_event(
+                            Event::Error(Error::ReferenceBroken {
+                                text: reference.to_string(),
+                                target: reference.to_string(),
+                            }),
+                        ));
                     }
                 }
                 ParserEvent::End(Tag::Link(target, _)) => {
@@ -118,58 +123,68 @@ mod tests {
     #[test]
     fn link() {
         let mut doc = Document::new("[text](target)");
-        assert_eq!(doc.next(),
-                   Some(LocatedEvent {
-                       event: Event::Link {
-                           target: "target".to_string(),
-                           text: "text".to_string(),
-                       },
-                       line: 1,
-                   }));
+        assert_eq!(
+            doc.next(),
+            Some(LocatedEvent {
+                event: Event::Link {
+                    target: "target".to_string(),
+                    text: "text".to_string(),
+                },
+                line: 1,
+            })
+        );
         assert_eq!(doc.next(), None);
     }
 
     #[test]
     fn links() {
         let mut doc = Document::new("[text 1](target1)\n[text 2](target2)");
-        assert_eq!(doc.next(),
-                   Some(LocatedEvent {
-                       event: Event::Link {
-                           target: "target1".to_string(),
-                           text: "text 1".to_string(),
-                       },
-                       line: 1,
-                   }));
-        assert_eq!(doc.next(),
-                   Some(LocatedEvent {
-                       event: Event::Link {
-                           target: "target2".to_string(),
-                           text: "text 2".to_string(),
-                       },
-                       line: 2,
-                   }));
+        assert_eq!(
+            doc.next(),
+            Some(LocatedEvent {
+                event: Event::Link {
+                    target: "target1".to_string(),
+                    text: "text 1".to_string(),
+                },
+                line: 1,
+            })
+        );
+        assert_eq!(
+            doc.next(),
+            Some(LocatedEvent {
+                event: Event::Link {
+                    target: "target2".to_string(),
+                    text: "text 2".to_string(),
+                },
+                line: 2,
+            })
+        );
         assert_eq!(doc.next(), None);
     }
 
     #[test]
     fn full_reference_links() {
         let mut doc = Document::new("[t 1][ref 1]\nText [t 2][ref 2]\n\n[ref 1]: 1\n[ref 2]: 2");
-        assert_eq!(doc.next(),
-                   Some(LocatedEvent {
-                       event: Event::Link {
-                           target: "1".to_string(),
-                           text: "t 1".to_string(),
-                       },
-                       line: 1,
-                   }));
-        assert_eq!(doc.next(),
-                   Some(LocatedEvent {
-                       event: Event::Link {
-                           target: "2".to_string(),
-                           text: "t 2".to_string(),
-                       },
-                       line: 2,
-                   }));
+        assert_eq!(
+            doc.next(),
+            Some(LocatedEvent {
+                event: Event::Link {
+                    target: "1".to_string(),
+                    text: "t 1".to_string(),
+                },
+                line: 1,
+            })
+        );
+        assert_eq!(
+            doc.next(),
+            Some(LocatedEvent {
+                event: Event::Link {
+                    target: "2".to_string(),
+                    text: "t 2".to_string(),
+                },
+                line: 2,
+            })
+        );
         assert_eq!(doc.next(), None);
     }
 }
