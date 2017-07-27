@@ -36,7 +36,7 @@ use rayon::prelude::*;
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::sync::Arc;
@@ -46,7 +46,7 @@ use walkdir::WalkDir;
 macro_rules! fail {
     ($($print:expr),+) => {
         {
-            let _ = writeln!(&mut std::io::stderr(), $($print),+);
+            eprintln!($($print),+);
             exit(1);
         }
     };
