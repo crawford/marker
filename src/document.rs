@@ -44,7 +44,7 @@ pub enum Error {
 impl<'a> Document<'a> {
     pub fn new(contents: &str) -> Document {
         Document {
-            parser: Parser::new_ext(&contents, OPTION_ENABLE_TABLES),
+            parser: Parser::new_ext(contents, OPTION_ENABLE_TABLES),
             newlines: contents.match_indices('\n').map(|(i, _)| i).collect(),
 
             code_block: false,
@@ -98,8 +98,8 @@ impl<'a> Iterator for Document<'a> {
     }
 }
 
-fn try_reference<'a>(text: &'a str) -> Option<&'a str> {
-    if text.chars().next() != Some('[') {
+fn try_reference(text: &str) -> Option<&str> {
+    if !text.starts_with('[') {
         return None;
     }
 

@@ -216,7 +216,7 @@ fn check_url(url: Url) -> Result<(), LinkError> {
                 status => Err(LinkError::HttpStatus(status)),
             }
         }
-        Err(error) => return Err(LinkError::HttpError(Arc::new(error))),
+        Err(error) => Err(LinkError::HttpError(Arc::new(error))),
     }
 }
 
