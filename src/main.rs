@@ -92,7 +92,8 @@ fn main() {
                 .short("r")
                 .long("root")
                 .help("The path to the root of the documentation to be checked")
-                .takes_value(true),
+                .takes_value(true)
+                .default_value("."),
         )
         .arg(Arg::with_name("skip-http").long("skip-http").help(
             "Skip validation of HTTP[S] URLs",
@@ -100,7 +101,7 @@ fn main() {
         .get_matches();
 
     let skip_http = matches.is_present("skip-http");
-    let root = Path::new(matches.value_of("root").unwrap_or("."));
+    let root = Path::new(matches.value_of("root").expect("default root"));
     let mut links = Vec::new();
     let mut found_error = false;
 
