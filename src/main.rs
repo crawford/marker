@@ -40,6 +40,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::sync::Arc;
+use std::time::Duration;
 use url::{ParseError, Url};
 use walkdir::WalkDir;
 
@@ -198,7 +199,9 @@ fn check_url(url: Url) -> Result<(), LinkError> {
         return Ok(());
     }
 
-    let client = Client::with_connector(HttpsConnector::new(TlsClient::new()));
+    println!("Checking {}", url);
+    let mut client = Client::with_connector(HttpsConnector::new(TlsClient::new()));
+    client.set_read_timeout(Some(Duration::from_secs(10)));
     let agent = UserAgent(format!("marker/{}", crate_version!()));
 
     let res = client
