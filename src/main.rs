@@ -199,7 +199,6 @@ fn check_url(url: Url) -> Result<(), LinkError> {
         return Ok(());
     }
 
-    println!("Checking {}", url);
     let mut client = Client::with_connector(HttpsConnector::new(TlsClient::new()));
     client.set_read_timeout(Some(Duration::from_secs(10)));
     let agent = UserAgent(format!("marker/{}", crate_version!()));
