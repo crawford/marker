@@ -24,7 +24,7 @@ extern crate walkdir;
 mod document;
 mod error;
 
-use clap::{Arg, App};
+use clap::{App, Arg};
 use document::{Document, Error, Event};
 use error::{DocumentError, DocumentLocation, LinkError, LocatedDocumentError};
 use hyper::client::Client;
@@ -96,9 +96,11 @@ fn main() {
                 .takes_value(true)
                 .default_value("."),
         )
-        .arg(Arg::with_name("skip-http").long("skip-http").help(
-            "Skip validation of HTTP[S] URLs",
-        ))
+        .arg(
+            Arg::with_name("skip-http")
+                .long("skip-http")
+                .help("Skip validation of HTTP[S] URLs"),
+        )
         .get_matches();
 
     let skip_http = matches.is_present("skip-http");
@@ -115,8 +117,7 @@ fn main() {
         } else {
             None
         }
-    })
-    {
+    }) {
         let contents = {
             let mut file = File::open(entry.path()).unwrap_or_else(|error| {
                 fail!(
@@ -138,25 +139,21 @@ fn main() {
 
         for event in Document::new(&contents) {
             match event.event {
-                Event::Link { target, text } => {
-                    links.push(LinkContext {
+                Event::Link { target, text } => links.push(LinkContext {
+                    target: target,
+                    text: text,
+                    line: event.line,
+                    file: entry.path().to_path_buf(),
+                }),
+                Event::Error(Error::ReferenceBroken { target, text }) => printerror!(
+                    LinkContext {
                         target: target,
                         text: text,
                         line: event.line,
                         file: entry.path().to_path_buf(),
-                    })
-                }
-                Event::Error(Error::ReferenceBroken { target, text }) => {
-                    printerror!(
-                        LinkContext {
-                            target: target,
-                            text: text,
-                            line: event.line,
-                            file: entry.path().to_path_buf(),
-                        }.new_error(LinkError::ReferenceBroken),
-                        found_error
-                    )
-                }
+                    }.new_error(LinkError::ReferenceBroken),
+                    found_error
+                ),
             }
         }
     }
@@ -207,18 +204,18 @@ fn check_url(url: Url) -> Result<(), LinkError> {
         .head(url.clone())
         .header(agent.clone())
         .send()
-        .and_then(|resp| if resp.status == StatusCode::MethodNotAllowed {
-            client.get(url.clone()).header(agent.clone()).send()
-        } else {
-            Ok(resp)
+        .and_then(|resp| {
+            if resp.status == StatusCode::MethodNotAllowed {
+                client.get(url.clone()).header(agent.clone()).send()
+            } else {
+                Ok(resp)
+            }
         });
     match res {
-        Ok(resp) => {
-            match resp.status {
-                StatusCode::Ok => Ok(()),
-                status => Err(LinkError::HttpStatus(status)),
-            }
-        }
+        Ok(resp) => match resp.status {
+            StatusCode::Ok => Ok(()),
+            status => Err(LinkError::HttpStatus(status)),
+        },
         Err(error) => Err(LinkError::HttpError(Arc::new(error))),
     }
 }
@@ -228,9 +225,9 @@ fn check_path(target: &str, file: &Path) -> Result<(), LinkError> {
     if path.is_absolute() {
         Err(LinkError::PathAbsolute)
     } else if !file.parent()
-               .expect("non-root file path")
-               .join(path)
-               .exists()
+        .expect("non-root file path")
+        .join(path)
+        .exists()
     {
         Err(LinkError::PathNonExistant)
     } else {

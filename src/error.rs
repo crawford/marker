@@ -69,27 +69,16 @@ impl fmt::Display for LocatedDocumentError {
                     LinkError::ReferenceBroken => ("Found broken reference", None),
                 };
                 match detail {
-                    Some(detail) => {
-                        write!(
-                            formatter,
-                            "{:22} ({} -> {}) at {} : {}",
-                            title,
-                            text,
-                            target,
-                            self.location,
-                            detail
-                        )
-                    }
-                    None => {
-                        write!(
-                            formatter,
-                            "{:22} ({} -> {}) at {}",
-                            title,
-                            text,
-                            target,
-                            self.location
-                        )
-                    }
+                    Some(detail) => write!(
+                        formatter,
+                        "{:22} ({} -> {}) at {} : {}",
+                        title, text, target, self.location, detail
+                    ),
+                    None => write!(
+                        formatter,
+                        "{:22} ({} -> {}) at {}",
+                        title, text, target, self.location
+                    ),
                 }
             }
         }

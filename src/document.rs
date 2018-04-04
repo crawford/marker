@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use pulldown_cmark::{Event as ParserEvent, OPTION_ENABLE_TABLES, Parser, Tag};
+use pulldown_cmark::{Event as ParserEvent, Parser, Tag, OPTION_ENABLE_TABLES};
 
 pub struct Document<'a> {
     parser: Parser<'a>,
@@ -72,12 +72,10 @@ impl<'a> Iterator for Document<'a> {
                 ParserEvent::Text(ref text) if !self.code_block => {
                     self.last_text = Some(text.to_string());
                     if let Some(reference) = try_reference(text) {
-                        return Some(self.new_located_event(
-                            Event::Error(Error::ReferenceBroken {
-                                text: reference.to_string(),
-                                target: reference.to_string(),
-                            }),
-                        ));
+                        return Some(self.new_located_event(Event::Error(Error::ReferenceBroken {
+                            text: reference.to_string(),
+                            target: reference.to_string(),
+                        })));
                     }
                 }
                 ParserEvent::End(Tag::Link(target, _)) => {
@@ -86,10 +84,12 @@ impl<'a> Iterator for Document<'a> {
                         text: self.last_text.clone().expect("some last text"),
                     }))
                 }
-                ParserEvent::Start(Tag::Code) |
-                ParserEvent::Start(Tag::CodeBlock(_)) => self.code_block = true,
-                ParserEvent::End(Tag::Code) |
-                ParserEvent::End(Tag::CodeBlock(_)) => self.code_block = false,
+                ParserEvent::Start(Tag::Code) | ParserEvent::Start(Tag::CodeBlock(_)) => {
+                    self.code_block = true
+                }
+                ParserEvent::End(Tag::Code) | ParserEvent::End(Tag::CodeBlock(_)) => {
+                    self.code_block = false
+                }
                 _ => {}
             }
         }
