@@ -54,7 +54,7 @@ impl<'a> Document<'a> {
 
     fn new_located_event(&self, event: Event) -> LocatedEvent {
         LocatedEvent {
-            event: event,
+            event,
             line: self.newlines
                 .iter()
                 .take_while(|&&i| i < self.parser.get_offset())
