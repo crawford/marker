@@ -79,7 +79,7 @@ impl LinkContext {
             error: DocumentError::Link {
                 text: self.text,
                 target: self.target,
-                error: error,
+                error,
             },
         }
     }
@@ -140,15 +140,15 @@ fn main() {
         for event in Document::new(&contents) {
             match event.event {
                 Event::Link { target, text } => links.push(LinkContext {
-                    target: target,
-                    text: text,
+                    target,
+                    text,
                     line: event.line,
                     file: entry.path().to_path_buf(),
                 }),
                 Event::Error(Error::ReferenceBroken { target, text }) => printerror!(
                     LinkContext {
-                        target: target,
-                        text: text,
+                        target,
+                        text,
                         line: event.line,
                         file: entry.path().to_path_buf(),
                     }.new_error(LinkError::ReferenceBroken),
@@ -164,7 +164,7 @@ fn main() {
             Ok(_) if skip_http => {}
             Ok(mut url) => {
                 url.set_fragment(None);
-                urls.entry(url).or_insert(Vec::new()).push(link)
+                urls.entry(url).or_insert_with(Vec::new).push(link)
             }
             Err(ParseError::RelativeUrlWithoutBase) => {
                 if let Err(error) = check_path(&link.target, &link.file) {
@@ -176,7 +176,7 @@ fn main() {
     }
 
     for (result, links) in urls.into_par_iter()
-        .map(|(url, links)| (check_url(url), links))
+        .map(|(url, links)| (check_url(&url), links))
         .collect::<Vec<_>>()
     {
         if let Err(error) = result {
@@ -191,7 +191,7 @@ fn main() {
     }
 }
 
-fn check_url(url: Url) -> Result<(), LinkError> {
+fn check_url(url: &Url) -> Result<(), LinkError> {
     if url.scheme() != "http" && url.scheme() != "https" {
         return Ok(());
     }
