@@ -54,12 +54,10 @@ macro_rules! fail {
 }
 
 macro_rules! printerror {
-    ($error:expr, $flag:expr) => {
-        {
-            println!("{}", $error);
-            $flag = true;
-        }
-    };
+    ($error:expr, $flag:expr) => {{
+        println!("{}", $error);
+        $flag = true;
+    }};
 }
 
 struct LinkContext {
@@ -101,10 +99,23 @@ fn main() {
                 .long("skip-http")
                 .help("Skip validation of HTTP[S] URLs"),
         )
+        .arg(
+            Arg::with_name("exclude")
+                .long("exclude")
+                .short("e")
+                .help("Path to exclude")
+                .takes_value(true)
+                .multiple(true)
+                .default_value(""),
+        )
         .get_matches();
 
     let skip_http = matches.is_present("skip-http");
     let root = Path::new(matches.value_of("root").expect("default root"));
+    let excludes: Vec<_> = matches
+        .values_of("exclude")
+        .expect("exclude paths")
+        .collect();
     let mut links = Vec::new();
     let mut found_error = false;
 
@@ -118,6 +129,17 @@ fn main() {
             None
         }
     }) {
+        let mut skip = false;
+        for exclude in &excludes {
+            let exclude_path = root.join(Path::new(exclude));
+            if exclude != &"" && entry.path().starts_with(exclude_path) {
+                skip = true;
+                break;
+            }
+        }
+        if skip {
+            continue;
+        }
         let contents = {
             let mut file = File::open(entry.path()).unwrap_or_else(|error| {
                 fail!(
@@ -151,7 +173,8 @@ fn main() {
                         text,
                         line: event.line,
                         file: entry.path().to_path_buf(),
-                    }.new_error(LinkError::ReferenceBroken),
+                    }
+                    .new_error(LinkError::ReferenceBroken),
                     found_error
                 ),
             }
@@ -175,7 +198,8 @@ fn main() {
         }
     }
 
-    for (result, links) in urls.into_par_iter()
+    for (result, links) in urls
+        .into_par_iter()
         .map(|(url, links)| (check_url(&url), links))
         .collect::<Vec<_>>()
     {
@@ -224,7 +248,8 @@ fn check_path(target: &str, file: &Path) -> Result<(), LinkError> {
     let path = Path::new(OsStr::new(target.split('#').next().expect("string")));
     if path.is_absolute() {
         Err(LinkError::PathAbsolute)
-    } else if !file.parent()
+    } else if !file
+        .parent()
         .expect("non-root file path")
         .join(path)
         .exists()
