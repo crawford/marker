@@ -12,15 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[macro_use]
-extern crate clap;
-extern crate hyper;
-extern crate hyper_rustls;
-extern crate pulldown_cmark;
-extern crate rayon;
-extern crate url;
-extern crate walkdir;
-
 mod document;
 mod error;
 
@@ -85,7 +76,7 @@ impl LinkContext {
 
 fn main() {
     let matches = App::new("Marker")
-        .version(crate_version!())
+        .version(clap::crate_version!())
         .arg(
             Arg::with_name("root")
                 .short("r")
@@ -222,7 +213,7 @@ fn check_url(url: &Url) -> Result<(), LinkError> {
 
     let mut client = Client::with_connector(HttpsConnector::new(TlsClient::new()));
     client.set_read_timeout(Some(Duration::from_secs(10)));
-    let agent = UserAgent(format!("marker/{}", crate_version!()));
+    let agent = UserAgent(format!("marker/{}", clap::crate_version!()));
 
     let res = client
         .head(url.clone())

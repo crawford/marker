@@ -60,7 +60,7 @@ impl fmt::Display for LocatedDocumentError {
                 ref target,
                 ref error,
             } => {
-                let (title, detail): (&str, Option<&fmt::Display>) = match *error {
+                let (title, detail): (&str, Option<&dyn fmt::Display>) = match *error {
                     LinkError::PathAbsolute => ("Found absolute path", None),
                     LinkError::PathNonExistant => ("Found broken path", None),
                     LinkError::HttpStatus(ref status) => ("Found broken url", Some(status)),
