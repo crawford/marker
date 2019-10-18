@@ -191,4 +191,20 @@ mod tests {
         );
         assert_eq!(doc.next(), None);
     }
+
+    #[test]
+    fn broken_reference() {
+        let mut doc = Document::new("This is a [broken reference].");
+        assert_eq!(
+            doc.next(),
+            Some(LocatedEvent {
+                event: Event::Error(Error::ReferenceBroken {
+                    target: "broken reference".to_string(),
+                    text: "broken reference".to_string()
+                }),
+                line: 1
+            })
+        );
+        assert_eq!(doc.next(), None);
+    }
 }
