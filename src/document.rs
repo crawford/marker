@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use pulldown_cmark::{Event as ParserEvent, Parser, Tag, OPTION_ENABLE_TABLES};
+use pulldown_cmark::{Event as ParserEvent, LinkType, OffsetIter, Options, Parser, Tag};
+use std::ops::Range;
 
 pub struct Document<'a> {
-    parser: Parser<'a>,
+    parser: OffsetIter<'a>,
     newlines: Vec<usize>,
 
     code_block: bool,
@@ -44,7 +45,12 @@ pub enum Error {
 impl<'a> Document<'a> {
     pub fn new(contents: &str) -> Document {
         Document {
-            parser: Parser::new_ext(contents, OPTION_ENABLE_TABLES),
+            parser: Parser::new_with_broken_link_callback(
+                contents,
+                Options::all(),
+                Some(&|label, _| Some((String::new(), label.to_string()))),
+            )
+            .into_offset_iter(),
             newlines: contents.match_indices('\n').map(|(i, _)| i).collect(),
 
             code_block: false,
@@ -52,13 +58,13 @@ impl<'a> Document<'a> {
         }
     }
 
-    fn new_located_event(&self, event: Event) -> LocatedEvent {
+    fn new_located_event(&self, event: Event, span: Range<usize>) -> LocatedEvent {
         LocatedEvent {
             event,
             line: self
                 .newlines
                 .iter()
-                .take_while(|&&i| i < self.parser.get_offset())
+                .take_while(|&&i| i < span.start)
                 .count()
                 + 1,
         }
@@ -69,47 +75,43 @@ impl<'a> Iterator for Document<'a> {
     type Item = LocatedEvent;
 
     fn next(&mut self) -> Option<LocatedEvent> {
-        while let Some(event) = self.parser.next() {
+        while let Some((event, position)) = self.parser.next() {
             match event {
                 ParserEvent::Text(ref text) if !self.code_block => {
                     self.last_text = Some(text.to_string());
-                    if let Some(reference) = try_reference(text) {
-                        return Some(self.new_located_event(Event::Error(
-                            Error::ReferenceBroken {
-                                text: reference.to_string(),
-                                target: reference.to_string(),
+                }
+                ParserEvent::End(Tag::Link(link_type, target, text)) => match link_type {
+                    LinkType::Inline
+                    | LinkType::Reference
+                    | LinkType::Collapsed
+                    | LinkType::Shortcut => {
+                        return Some(self.new_located_event(
+                            Event::Link {
+                                target: target.to_string(),
+                                text: self.last_text.clone().expect("some last text"),
                             },
-                        )));
+                            position,
+                        ))
                     }
-                }
-                ParserEvent::End(Tag::Link(target, _)) => {
-                    return Some(self.new_located_event(Event::Link {
-                        target: target.to_string(),
-                        text: self.last_text.clone().expect("some last text"),
-                    }))
-                }
-                ParserEvent::Start(Tag::Code) | ParserEvent::Start(Tag::CodeBlock(_)) => {
-                    self.code_block = true
-                }
-                ParserEvent::End(Tag::Code) | ParserEvent::End(Tag::CodeBlock(_)) => {
-                    self.code_block = false
-                }
+                    LinkType::ReferenceUnknown
+                    | LinkType::CollapsedUnknown
+                    | LinkType::ShortcutUnknown => {
+                        return Some(self.new_located_event(
+                            Event::Error(Error::ReferenceBroken {
+                                target: target.to_string(),
+                                text: text.to_string(),
+                            }),
+                            position,
+                        ))
+                    }
+                    _ => {}
+                },
+                ParserEvent::Start(Tag::CodeBlock(_)) => self.code_block = true,
+                ParserEvent::End(Tag::CodeBlock(_)) => self.code_block = false,
                 _ => {}
             }
         }
 
-        None
-    }
-}
-
-fn try_reference(text: &str) -> Option<&str> {
-    if !text.starts_with('[') {
-        return None;
-    }
-
-    if let Some(pos) = text.find(']') {
-        Some(&text[1..pos])
-    } else {
         None
     }
 }
@@ -199,12 +201,18 @@ mod tests {
             doc.next(),
             Some(LocatedEvent {
                 event: Event::Error(Error::ReferenceBroken {
-                    target: "broken reference".to_string(),
+                    target: String::new(),
                     text: "broken reference".to_string()
                 }),
                 line: 1
             })
         );
+        assert_eq!(doc.next(), None);
+    }
+
+    #[test]
+    fn tasklist() {
+        let mut doc = Document::new("- [ ] Item 1\n- [ ] Item 2");
         assert_eq!(doc.next(), None);
     }
 }

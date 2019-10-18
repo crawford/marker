@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 hyper = "^0.10"
 hyper-rustls = "^0.6"
-pulldown-cmark = "^0.1"
+pulldown-cmark = "0.6.0"
 rayon = "^1.0"
 structopt = "0.3.3"
 url = "^1.5"
