@@ -74,10 +74,12 @@ impl<'a> Iterator for Document<'a> {
                 ParserEvent::Text(ref text) if !self.code_block => {
                     self.last_text = Some(text.to_string());
                     if let Some(reference) = try_reference(text) {
-                        return Some(self.new_located_event(Event::Error(Error::ReferenceBroken {
-                            text: reference.to_string(),
-                            target: reference.to_string(),
-                        })));
+                        return Some(self.new_located_event(Event::Error(
+                            Error::ReferenceBroken {
+                                text: reference.to_string(),
+                                target: reference.to_string(),
+                            },
+                        )));
                     }
                 }
                 ParserEvent::End(Tag::Link(target, _)) => {
