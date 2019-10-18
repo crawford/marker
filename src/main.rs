@@ -15,7 +15,6 @@
 mod document;
 mod error;
 
-use clap::{App, Arg};
 use document::{Document, Error, Event};
 use error::{DocumentError, DocumentLocation, LinkError, LocatedDocumentError};
 use hyper::client::Client;
@@ -32,6 +31,7 @@ use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::sync::Arc;
 use std::time::Duration;
+use structopt::StructOpt;
 use url::{ParseError, Url};
 use walkdir::WalkDir;
 
@@ -74,43 +74,28 @@ impl LinkContext {
     }
 }
 
-fn main() {
-    let matches = App::new("Marker")
-        .version(clap::crate_version!())
-        .arg(
-            Arg::with_name("root")
-                .short("r")
-                .long("root")
-                .help("The path to the root of the documentation to be checked")
-                .takes_value(true)
-                .default_value("."),
-        )
-        .arg(
-            Arg::with_name("skip-http")
-                .long("skip-http")
-                .help("Skip validation of HTTP[S] URLs"),
-        )
-        .arg(
-            Arg::with_name("exclude")
-                .long("exclude")
-                .short("e")
-                .help("Path to exclude")
-                .takes_value(true)
-                .multiple(true)
-                .default_value(""),
-        )
-        .get_matches();
+#[derive(StructOpt)]
+struct Options {
+    /// The path to the root of the documentation to be checked
+    #[structopt(short, long, default_value = ".")]
+    root: PathBuf,
 
-    let skip_http = matches.is_present("skip-http");
-    let root = Path::new(matches.value_of("root").expect("default root"));
-    let excludes: Vec<_> = matches
-        .values_of("exclude")
-        .expect("exclude paths")
-        .collect();
+    /// Skip validation of HTTP(S) URLs
+    #[structopt(short, long)]
+    skip_http: bool,
+
+    /// Path(s) to exclude, relative to the root
+    #[structopt(short, long)]
+    exclude: Vec<PathBuf>,
+}
+
+fn main() {
+    let options = Options::from_args();
+
     let mut links = Vec::new();
     let mut found_error = false;
 
-    for entry in WalkDir::new(root).into_iter().filter_map(|entry| {
+    'entries: for entry in WalkDir::new(&options.root).into_iter().filter_map(|entry| {
         let entry = entry.unwrap_or_else(|error| {
             fail!("Failed to walk directory: {}", error);
         });
@@ -120,16 +105,10 @@ fn main() {
             None
         }
     }) {
-        let mut skip = false;
-        for exclude in &excludes {
-            let exclude_path = root.join(Path::new(exclude));
-            if exclude != &"" && entry.path().starts_with(exclude_path) {
-                skip = true;
-                break;
+        for exclude in &options.exclude {
+            if entry.path().starts_with(options.root.join(exclude)) {
+                continue 'entries;
             }
-        }
-        if skip {
-            continue;
         }
         let contents = {
             let mut file = File::open(entry.path()).unwrap_or_else(|error| {
@@ -175,7 +154,7 @@ fn main() {
     let mut urls = HashMap::new();
     for link in links {
         match Url::parse(&link.target) {
-            Ok(_) if skip_http => {}
+            Ok(_) if options.skip_http => {}
             Ok(mut url) => {
                 url.set_fragment(None);
                 urls.entry(url).or_insert_with(Vec::new).push(link)
@@ -213,7 +192,7 @@ fn check_url(url: &Url) -> Result<(), LinkError> {
 
     let mut client = Client::with_connector(HttpsConnector::new(TlsClient::new()));
     client.set_read_timeout(Some(Duration::from_secs(10)));
-    let agent = UserAgent(format!("marker/{}", clap::crate_version!()));
+    let agent = UserAgent(format!("marker/{}", structopt::clap::crate_version!()));
 
     let res = client
         .head(url.clone())
