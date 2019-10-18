@@ -55,10 +55,12 @@ impl<'a> Document<'a> {
     fn new_located_event(&self, event: Event) -> LocatedEvent {
         LocatedEvent {
             event,
-            line: self.newlines
+            line: self
+                .newlines
                 .iter()
                 .take_while(|&&i| i < self.parser.get_offset())
-                .count() + 1,
+                .count()
+                + 1,
         }
     }
 }
