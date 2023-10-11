@@ -1,0 +1,21 @@
+name: CI
+on: [ pull_request ]
+jobs:
+  code-check:
+    name: Code Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Parse MSRV
+        run: sed -n 's/^rust-version = "\(.*\)"$/RUSTUP_TOOLCHAIN=\1/p' Cargo.toml >> $GITHUB_ENV
+      - name: Install Rust Toolchain
+        run: rustup toolchain install $RUSTUP_TOOLCHAIN
+      - name: Install Clippy and Rustfmt
+        run: rustup component add clippy rustfmt
+
+      - name: Check format
+        run: cargo fmt --check
+
+      - name: Clippy check
+        run: cargo clippy --no-deps -- --deny=warnings
