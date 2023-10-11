@@ -224,7 +224,7 @@ fn check_url(url: &Url) -> Result<(), LinkError> {
 }
 
 fn check_path(
-    root: &PathBuf,
+    root: &Path,
     target: &str,
     file: &Path,
     allow_absolute_paths: bool,
