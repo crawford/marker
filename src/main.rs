@@ -87,6 +87,10 @@ struct Options {
     /// Path(s) to exclude, relative to the root
     #[structopt(short, long)]
     exclude: Vec<PathBuf>,
+
+    /// Allow absolute path to join with root and evaluate
+    #[structopt(short, long)]
+    allow_absolute_paths: bool,
 }
 
 fn main() {
@@ -160,7 +164,12 @@ fn main() {
                 urls.entry(url).or_insert_with(Vec::new).push(link)
             }
             Err(ParseError::RelativeUrlWithoutBase) => {
-                if let Err(error) = check_path(&link.target, &link.file) {
+                if let Err(error) = check_path(
+                    &options.root,
+                    &link.target,
+                    &link.file,
+                    options.allow_absolute_paths,
+                ) {
                     printerror!(link.new_error(error), found_error)
                 }
             }
@@ -214,11 +223,30 @@ fn check_url(url: &Url) -> Result<(), LinkError> {
     }
 }
 
-fn check_path(target: &str, file: &Path) -> Result<(), LinkError> {
+fn check_path(
+    root: &PathBuf,
+    target: &str,
+    file: &Path,
+    allow_absolute_paths: bool,
+) -> Result<(), LinkError> {
     let path = Path::new(OsStr::new(target.split('#').next().expect("string")));
+
     if path.is_absolute() {
-        Err(LinkError::PathAbsolute)
-    } else if !file
+        if !allow_absolute_paths {
+            return Err(LinkError::PathAbsolute);
+        }
+
+        let mut path_comps = path.components();
+        path_comps.next();
+
+        if root.join(path_comps.as_path()).exists() {
+            return Ok(());
+        } else {
+            return Err(LinkError::PathNonExistant);
+        }
+    }
+
+    if !file
         .parent()
         .expect("non-root file path")
         .join(path)
