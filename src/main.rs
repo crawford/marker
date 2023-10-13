@@ -31,7 +31,7 @@ use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::sync::Arc;
 use std::time::Duration;
-use structopt::StructOpt;
+use clap::Parser;
 use url::{ParseError, Url};
 use walkdir::WalkDir;
 
@@ -74,27 +74,27 @@ impl LinkContext {
     }
 }
 
-#[derive(StructOpt)]
+#[derive(Parser)]
 struct Options {
     /// The path to the root of the documentation to be checked
-    #[structopt(short, long, default_value = ".")]
+    #[clap(short, long, default_value = ".")]
     root: PathBuf,
 
     /// Skip validation of HTTP(S) URLs
-    #[structopt(short, long)]
+    #[clap(short, long)]
     skip_http: bool,
 
     /// Path(s) to exclude, relative to the root
-    #[structopt(short, long)]
+    #[clap(short, long)]
     exclude: Vec<PathBuf>,
 
     /// Allow absolute path to join with root and evaluate
-    #[structopt(short, long)]
+    #[clap(short, long)]
     allow_absolute_paths: bool,
 }
 
 fn main() {
-    let options = Options::from_args();
+    let options = Options::parse();
 
     let mut links = Vec::new();
     let mut found_error = false;
@@ -201,7 +201,7 @@ fn check_url(url: &Url) -> Result<(), LinkError> {
 
     let mut client = Client::with_connector(HttpsConnector::new(TlsClient::new()));
     client.set_read_timeout(Some(Duration::from_secs(10)));
-    let agent = UserAgent(format!("marker/{}", structopt::clap::crate_version!()));
+    let agent = UserAgent(format!("marker/{}", clap::crate_version!()));
 
     let res = client
         .head(url.clone())
