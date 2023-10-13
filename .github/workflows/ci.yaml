@@ -18,4 +18,6 @@ jobs:
         run: cargo fmt --check
 
       - name: Clippy check
-        run: cargo clippy --no-deps -- --deny=warnings
+        run: |
+          cargo clippy --no-deps -- --deny=warnings
+          cargo clippy --no-deps --no-default-features -- --deny=warnings

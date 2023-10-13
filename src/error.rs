@@ -14,15 +14,16 @@
 
 use std::fmt;
 use std::path::PathBuf;
-use std::sync::Arc;
 use url::ParseError;
 
 #[derive(Clone)]
 pub enum LinkError {
     PathAbsolute,
     PathNonExistant,
+    #[cfg(feature = "network")]
     HttpStatus(reqwest::StatusCode),
-    HttpError(Arc<reqwest::Error>),
+    #[cfg(feature = "network")]
+    HttpError(std::sync::Arc<reqwest::Error>),
     UrlMalformed(ParseError),
     ReferenceBroken,
 }
@@ -62,7 +63,9 @@ impl fmt::Display for LocatedDocumentError {
                 let (title, detail): (&str, Option<&dyn fmt::Display>) = match *error {
                     LinkError::PathAbsolute => ("Found absolute path", None),
                     LinkError::PathNonExistant => ("Found broken path", None),
+                    #[cfg(feature = "network")]
                     LinkError::HttpStatus(ref status) => ("Found broken url", Some(status)),
+                    #[cfg(feature = "network")]
                     LinkError::HttpError(ref err) => ("HTTP failure", Some(err)),
                     LinkError::UrlMalformed(ref err) => ("Found malformed URL", Some(err)),
                     LinkError::ReferenceBroken => ("Found broken reference", None),

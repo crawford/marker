@@ -15,19 +15,15 @@
 mod document;
 mod error;
 
+use clap::Parser;
 use document::{Document, Error, Event};
 use error::{DocumentError, DocumentLocation, LinkError, LocatedDocumentError};
-use rayon::prelude::*;
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::exit;
-use std::sync::Arc;
-use std::time::Duration;
-use clap::Parser;
-use reqwest::{blocking::Client, StatusCode};
 use url::{ParseError, Url};
 use walkdir::WalkDir;
 
@@ -173,6 +169,24 @@ fn main() {
         }
     }
 
+    #[cfg(feature = "network")]
+    {
+        found_error |= check_urls(urls);
+    }
+
+    if found_error {
+        exit(1)
+    }
+}
+
+#[cfg(feature = "network")]
+fn check_urls(urls: HashMap<Url, Vec<LinkContext>>) -> bool {
+    use rayon::prelude::*;
+    use reqwest::blocking::Client;
+    use std::time::Duration;
+
+    let mut found_error = false;
+
     let client = match Client::builder()
         .user_agent(format!("marker/{}", clap::crate_version!()))
         .timeout(Duration::from_secs(10))
@@ -194,12 +208,14 @@ fn main() {
         }
     }
 
-    if found_error {
-        exit(1)
-    }
+    found_error
 }
 
-fn check_url(client: &Client, url: &Url) -> Result<(), LinkError> {
+#[cfg(feature = "network")]
+fn check_url(client: &reqwest::blocking::Client, url: &Url) -> Result<(), LinkError> {
+    use reqwest::StatusCode;
+    use std::sync::Arc;
+
     if url.scheme() != "http" && url.scheme() != "https" {
         return Ok(());
     }
