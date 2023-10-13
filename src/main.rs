@@ -17,11 +17,6 @@ mod error;
 
 use document::{Document, Error, Event};
 use error::{DocumentError, DocumentLocation, LinkError, LocatedDocumentError};
-use hyper::client::Client;
-use hyper::header::UserAgent;
-use hyper::net::HttpsConnector;
-use hyper::status::StatusCode;
-use hyper_rustls::TlsClient;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -32,6 +27,7 @@ use std::process::exit;
 use std::sync::Arc;
 use std::time::Duration;
 use clap::Parser;
+use reqwest::{blocking::Client, StatusCode};
 use url::{ParseError, Url};
 use walkdir::WalkDir;
 
@@ -177,9 +173,18 @@ fn main() {
         }
     }
 
+    let client = match Client::builder()
+        .user_agent(format!("marker/{}", clap::crate_version!()))
+        .timeout(Duration::from_secs(10))
+        .build()
+    {
+        Ok(client) => client,
+        Err(err) => fail!("Failed to create HTTP client: {}", err),
+    };
+
     for (result, links) in urls
         .into_par_iter()
-        .map(|(url, links)| (check_url(&url), links))
+        .map(|(url, links)| (check_url(&client, &url), links))
         .collect::<Vec<_>>()
     {
         if let Err(error) = result {
@@ -194,32 +199,23 @@ fn main() {
     }
 }
 
-fn check_url(url: &Url) -> Result<(), LinkError> {
+fn check_url(client: &Client, url: &Url) -> Result<(), LinkError> {
     if url.scheme() != "http" && url.scheme() != "https" {
         return Ok(());
     }
 
-    let mut client = Client::with_connector(HttpsConnector::new(TlsClient::new()));
-    client.set_read_timeout(Some(Duration::from_secs(10)));
-    let agent = UserAgent(format!("marker/{}", clap::crate_version!()));
-
-    let res = client
-        .head(url.clone())
-        .header(agent.clone())
-        .send()
-        .and_then(|resp| {
-            if resp.status == StatusCode::MethodNotAllowed {
-                client.get(url.clone()).header(agent.clone()).send()
-            } else {
-                Ok(resp)
-            }
-        });
-    match res {
-        Ok(resp) => match resp.status {
-            StatusCode::Ok => Ok(()),
+    match client.head(url.clone()).send().and_then(|resp| {
+        if resp.status() == StatusCode::METHOD_NOT_ALLOWED {
+            client.get(url.clone()).send()
+        } else {
+            Ok(resp)
+        }
+    }) {
+        Ok(resp) => match resp.status() {
+            StatusCode::OK => Ok(()),
             status => Err(LinkError::HttpStatus(status)),
         },
-        Err(error) => Err(LinkError::HttpError(Arc::new(error))),
+        Err(err) => Err(LinkError::HttpError(Arc::new(err))),
     }
 }
 

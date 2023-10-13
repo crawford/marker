@@ -21,8 +21,8 @@ use url::ParseError;
 pub enum LinkError {
     PathAbsolute,
     PathNonExistant,
-    HttpStatus(hyper::status::StatusCode),
-    HttpError(Arc<hyper::error::Error>),
+    HttpStatus(reqwest::StatusCode),
+    HttpError(Arc<reqwest::Error>),
     UrlMalformed(ParseError),
     ReferenceBroken,
 }
