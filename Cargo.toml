@@ -14,6 +14,10 @@ rust-version = "1.70.0"
 clap = { version = "4.4.6", features = ["cargo", "derive"] }
 pulldown-cmark = "0.6.0"
 rayon = "^1.0"
-reqwest = { version = "0.11.22", features = ["blocking"] }
+reqwest = { version = "0.11.22", features = ["blocking"], optional = true }
 url = "2.4.1"
 walkdir = "^2.0"
+
+[features]
+default = [ "network" ]
+network = [ "dep:reqwest" ]
