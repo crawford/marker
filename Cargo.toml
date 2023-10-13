@@ -1,6 +1,6 @@
 [package]
 name = "marker"
-version = "0.9.0-dev"
+version = "0.10.0-dev"
 authors = ["Alex Crawford <alex.crawford@coreos.com>"]
 description = "Tool for finding issues in CommonMark documents"
 repository = "https://github.com/crawford/marker"
