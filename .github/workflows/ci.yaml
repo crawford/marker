@@ -5,7 +5,7 @@ jobs:
     name: Code Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Parse MSRV
         run: sed -n 's/^rust-version = "\(.*\)"$/RUSTUP_TOOLCHAIN=\1/p' Cargo.toml >> $GITHUB_ENV
@@ -21,3 +21,4 @@ jobs:
         run: |
           cargo clippy --no-deps -- --deny=warnings
           cargo clippy --no-deps --no-default-features -- --deny=warnings
+          cargo test
