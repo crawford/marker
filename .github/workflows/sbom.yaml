@@ -1,0 +1,32 @@
+name: Generate an SBOM from source code
+on:
+  pull_request:
+  push:
+    branches:
+      - 'master'
+jobs:
+  generate-sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Generate SBOM from source code
+        uses: anchore/sbom-action@a4126e6810341af80d172ee5ebf8ff419a2e8b21
+        with:
+          artifact-name: sbom.spdx.json
+          upload-artifact: true
+          config: .github/edgebit/source-syft.yaml
+
+      - name: Save metadata to an artifact
+        run: |
+          cat > /tmp/metadata.json <<EOF
+            {
+              "pr-number": "${{ github.event.number }}",
+              "tags": "${{ github.ref == 'refs/heads/master' && 'latest' || '' }}"
+            }
+          EOF
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: metadata.json
+          path: /tmp/metadata.json
