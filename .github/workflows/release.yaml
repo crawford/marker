@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "**"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create ${{ github.ref_name }}
+
+  assets:
+    name: Create artifact
+    needs: release
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          rustup toolchain install stable
+          rustup target install ${{ matrix.target }}
+      - name: Build executable
+        id: build
+        run: |
+          cargo build --release --target ${{ matrix.target }} --no-default-features
+          echo path=target/${{ matrix.target }}/release/marker >> $GITHUB_OUTPUT
+      - name: Package executable
+        id: package
+        env:
+          NAME: marker-${{ github.ref_name }}-${{ matrix.target }}
+        run: |
+          mkdir -p $NAME
+          cp ${{ steps.build.outputs.path }} $NAME/
+          tar --create --gzip --file $NAME.tar.gz $NAME/
+          echo path=$NAME.tar.gz >> $GITHUB_OUTPUT
+      - name: Upload artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload ${{ github.ref_name }} ${{ steps.package.outputs.path }}
