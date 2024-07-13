@@ -5,12 +5,11 @@ on:
     tags:
       - "**"
 
-permissions:
-  contents: write
-
 jobs:
   release:
     name: Create release
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,6 +20,10 @@ jobs:
   assets:
     name: Create artifact
     needs: release
+    permissions:
+      id-token: write
+      attestations: write
+      contents: write
     strategy:
       matrix:
         include:
@@ -51,8 +54,14 @@ jobs:
           mkdir -p $NAME
           cp ${{ steps.build.outputs.path }} $NAME/
           tar --create --gzip --file $NAME.tar.gz $NAME/
+          echo name=$NAME >> $GITHUB_OUTPUT
           echo path=$NAME.tar.gz >> $GITHUB_OUTPUT
       - name: Upload artifact
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload ${{ github.ref_name }} ${{ steps.package.outputs.path }}
+      - name: Generate attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: ${{ steps.build.outputs.path }}
+          subject-name: ${{ steps.package.outputs.name }}
